@@ -1,0 +1,63 @@
+name: Louis App Tests
+
+on:
+  merge_group:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  Test:
+    timeout-minutes: 40
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@kong'
+
+      - name: Install packages
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Build app for Louis tests
+        run: NODE_OPTIONS='--max_old_space_size=6144' npm run app-build
+
+      - name: Run Louis Test project
+        run: npm run test:build -w packages/insomnia-smoke-test -- --project="Louis Test"
+
+      - name: Run Allure Action
+        uses: allure-framework/allure-report@v0
+        with:
+          report-directory: "packages/insomnia-smoke-test/allure-report"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Louis test traces
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          if-no-files-found: ignore
+          name: ubuntu-louis-test-traces-${{ github.run_number }}
+          path: packages/insomnia-smoke-test/traces

@@ -19,6 +19,12 @@ const config: PlaywrightTestConfig = {
       testMatch: /migration\/.*.test.ts/,
       retries: 0,
     },
+    {
+      // Single critical path test, runs on release recurring
+      name: 'Louis Test',
+      testMatch: /assignment-louis\/.*.test.ts/,
+      retries: 0,
+    },
   ],
   webServer: {
     command: 'npm run serve',
@@ -34,7 +40,7 @@ const config: PlaywrightTestConfig = {
       sources: true,
     },
   },
-  reporter: process.env.CI ? [['github'], ['line']] : [['list']],
+  reporter: process.env.CI ? [['github'], ['line'], ['allure-playwright']] : [['list'], ['allure-playwright']],
   timeout: process.env.CI ? 60 * 1000 : 20 * 1000,
   forbidOnly: !!process.env.CI,
   outputDir: 'traces',
