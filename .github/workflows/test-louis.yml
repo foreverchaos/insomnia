@@ -37,10 +37,18 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@kong'
 
-      - name: Install packages
+      # - name: Configure npm auth for GitHub Packages
+      #   run: |
+      #     echo "@kong:registry=https://npm.pkg.github.com" >> ~/.npmrc
+      #     echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
+      #     echo "always-auth=true" >> ~/.npmrc
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install deps without lifecycle scripts
         run: npm ci
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.KONG_PACKAGES_READ_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       - name: Build app for Louis tests
@@ -49,16 +57,28 @@ jobs:
       - name: Run Louis Test project
         run: npm run test:build -w packages/insomnia-smoke-test -- --project="Louis Test"
 
-      - name: Run Allure Action
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: ./
-        with:
-          report-directory: "./out/allure-report"
-          remote-href: "https://allure-framework.github.io/allure-action/${{ steps.path.outputs.subdir }}"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # 生成 Allure HTML 报告
+      - name: Generate Allure report
+        if: always()
+        run: |
+          npx allure-commandline generate ./packages/insomnia-smoke-test/allure-results --clean -o ./out/allure-report
 
+      # 可选：在 Actions 页面保留产物
+      - name: Upload Allure report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: ./out/allure-report
+
+      # 可选：定义 Pages 子目录（修复你当前 steps.path.outputs.subdir 未定义问题）
+      - name: Compute report subdir
+        id: path
+        run: echo "subdir=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+
+      # 发布到 gh-pages
       - name: Deploy to GitHub Pages
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
