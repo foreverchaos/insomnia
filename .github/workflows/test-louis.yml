@@ -56,33 +56,11 @@ jobs:
 
       - name: Run Louis Test project
         run: npm run test:build -w packages/insomnia-smoke-test -- --project="Louis Test"
-
-      # 生成 Allure HTML 报告
-      - name: Generate Allure report
-        if: always()
-        run: |
-          npx allure-commandline generate ./packages/insomnia-smoke-test/allure-results --clean -o ./out/allure-report
-
-      # 可选：在 Actions 页面保留产物
-      - name: Upload Allure report artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+        
+      - name: Upload smoke test
+        uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
         with:
-          name: allure-report
-          path: ./out/allure-report
-
-      # 可选：定义 Pages 子目录（修复你当前 steps.path.outputs.subdir 未定义问题）
-      - name: Compute report subdir
-        id: path
-        run: echo "subdir=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-
-      # 发布到 gh-pages
-      - name: Deploy to GitHub Pages
-        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./out/allure-report
-          publish_branch: gh-pages
-          destination_dir: ${{ steps.path.outputs.subdir }}
-          keep_files: true
+          if-no-files-found: ignore
+          name: ubuntu-smoke-test-traces-${{ github.run_number }}
+          path: packages/insomnia-smoke-test/traces

@@ -1,5 +1,5 @@
-import type { PlaywrightTestConfig } from '@playwright/test';
-const config: PlaywrightTestConfig = {
+import { defineConfig } from '@playwright/test';
+export default defineConfig({
   projects: [
     {
       // High-confidence smoke/sanity checks, runs on Test App only on Ubuntu
@@ -40,7 +40,11 @@ const config: PlaywrightTestConfig = {
       sources: true,
     },
   },
-  reporter: process.env.CI ? [['github'], ['line'], ['allure-playwright']] : [['list'], ['allure-playwright']],
+  reporter: process.env.CI ? [['github'], ['list'],['@estruyf/github-actions-reporter', ({
+      title: 'Insomnia Test Report - Louis',
+      useDetails: true,
+      showError: true
+    } as GitHubActionOptions)]] : [['list']],
   timeout: process.env.CI ? 60 * 1000 : 20 * 1000,
   forbidOnly: !!process.env.CI,
   outputDir: 'traces',
@@ -50,5 +54,4 @@ const config: PlaywrightTestConfig = {
   },
   workers: 1,
   globalTimeout: 20 * 60 * 1000,
-};
-export default config;
+});
