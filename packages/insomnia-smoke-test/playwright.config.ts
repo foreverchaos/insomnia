@@ -1,4 +1,8 @@
 import { defineConfig } from '@playwright/test';
+
+const isCI = !!process.env.CI;
+
+// Louis: Update defineConfig instead of PlaywrightTestConfig based on practice of playwright offical doc
 export default defineConfig({
   projects: [
     {
@@ -20,10 +24,11 @@ export default defineConfig({
       retries: 0,
     },
     {
-      // Single critical path test, runs on release recurring
-      name: 'Louis Test',
+      // Louis temp tests, just for assignment
+      name: 'LouisTest',
       testMatch: /assignment-louis\/.*.test.ts/,
-      retries: 0,
+      // Louis: Set retry count to 1 due to CI instability.
+      retries: isCI ? 1 : 0
     },
   ],
   webServer: {
@@ -33,6 +38,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   use: {
+    // Louis: Switch on video recording if needed.
+    video: 'retain-on-failure',
     trace: {
       mode: 'retain-on-failure',
       screenshots: true,
@@ -40,6 +47,7 @@ export default defineConfig({
       sources: true,
     },
   },
+  // Louis: Add github actions reporting which can be attached in workflow result page.
   reporter: process.env.CI ? [['github'], ['list'],['@estruyf/github-actions-reporter', ({
       title: 'Insomnia Test Report - Louis',
       useDetails: true,

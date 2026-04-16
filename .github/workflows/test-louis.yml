@@ -37,14 +37,6 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@kong'
 
-      # - name: Configure npm auth for GitHub Packages
-      #   run: |
-      #     echo "@kong:registry=https://npm.pkg.github.com" >> ~/.npmrc
-      #     echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> ~/.npmrc
-      #     echo "always-auth=true" >> ~/.npmrc
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install deps without lifecycle scripts
         run: npm ci
         env:
@@ -55,7 +47,7 @@ jobs:
         run: NODE_OPTIONS='--max_old_space_size=6144' npm run app-build
 
       - name: Run Louis Test project
-        run: npm run test:build -w packages/insomnia-smoke-test -- --project="Louis Test"
+        run: npm run test:build -w packages/insomnia-smoke-test -- --project="LouisTest"
         
       - name: Upload smoke test
         uses: actions/upload-artifact@v7

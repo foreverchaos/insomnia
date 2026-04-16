@@ -1,81 +1,95 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 import { test } from '../../playwright/test';
 
+const openAndCreateGrpcRequest = async (page: Page) => {
+  await page.getByRole('button', { name: 'Create request collection' }).click();
+  await page.getByRole('button', { name: 'Create in collection' }).click();
+  await page.getByRole('menuitemradio', { name: 'gRPC Request' }).click();
+  await expect.soft(page.getByTestId('New Request').getByText('gRPCNew Request')).toBeVisible();
+};
+
+const deleteDefaultGrpcRequest = async (page: Page) => {
+  await page.getByTestId('My first request').getByText('GETMy first request').hover();
+  await page.getByTestId('Dropdown-My-first-request').click();
+  await page.getByRole('menuitemradio', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+};
+
+const renameGrpcRequest = async (page: Page, requestName: string) => {
+  await page.getByTestId('New Request').getByText('gRPCNew Request').hover();
+  await page.getByTestId('Dropdown-New-Request').click();
+  await page.getByRole('menuitemradio', { name: 'Rename' }).click();
+  await page.getByRole('textbox', { name: 'gRPC New Request' }).fill(`${requestName}\n`);
+};
+
+const selectGrpcMethodFromReflection = async (page: Page, methodName: string) => {
+  await page.getByTestId('button-server-reflection').click();
+  const selectMethodButton = page.getByRole('button', { name: 'Select Method Select gRPC' });
+  await expect.soft(selectMethodButton).toBeEnabled();
+  await selectMethodButton.click();
+  await page.getByRole('option', { name: methodName }).click();
+};
+
+const fillGrpcRequestBody = async (page: Page, body: Record<string, unknown>) => {
+  await page.getByRole('tab', { name: 'Server Streaming' }).click();
+  const bodyArea = page.getByTestId('CodeEditor').getByRole('textbox');
+  await bodyArea.focus();
+  await bodyArea.press('ControlOrMeta+a');
+  await bodyArea.press('Backspace');
+  await bodyArea.pressSequentially(JSON.stringify(body));
+  /** Trade-Off, we should never use hard delay in tests, but I tried multiple times, it will pop a error message:
+   UNKNOWN: Server method handler threw error Cannot read properties of null (reading 'longitude')
+   Take this workaround for temperately.
+   */
+  await page.waitForTimeout(1000);
+};
+
+/**
+ * GRPC Server Stream test, provide scope of geographic coordinates to get the names of the locations.
+ */
 test.describe('New GRPC request', () => {
   test.slow(process.platform === 'darwin' || process.platform === 'win32', 'Slow app start on these platforms');
 
   test('Create GRPC request - Server Stream', async ({ page, insomnia }) => {
-    const statusTag = page.locator('[data-testid="response-status-tag"]:visible');
-    const responseBody = page.getByTestId('response-pane');
-
     const requestBody = {
-        lo:{
-          "latitude":"400000000",
-          "longitude":"-750000000"
-        },
-        hi:{
-          "latitude":"420000000",
-          "longitude":"-730000000"
-        }
-      }
+      lo: {
+        latitude: '400000000',
+        longitude: '-750000000',
+      },
+      hi: {
+        latitude: '420000000',
+        longitude: '-730000000',
+      },
+    };
 
     await insomnia.projectPage.createProject('Louis GRPC test project', 'local');
-    await page.getByRole('button', { name: 'Create request collection' }).click();
-    await page.getByRole('button', { name: 'Create in collection' }).click();
-    await page.getByRole('menuitemradio', { name: 'gRPC Request' }).click();
-    await expect.soft(page.getByTestId('New Request').getByText('gRPCNew Request')).toBeVisible();
-    
-    await page.getByTestId('My first request').getByText('GETMy first request').hover();
-    await page.getByTestId('Dropdown-My-first-request').click();
-    await page.getByRole('menuitemradio', { name: 'Delete' }).click();
-    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+    await openAndCreateGrpcRequest(page);
+    await deleteDefaultGrpcRequest(page);
+    await renameGrpcRequest(page, 'Louis GRPC request - Server Stream');
+    await insomnia.workspacePage.fillRequestUrl('localhost:50051');
 
-    await page.getByTestId('New Request').getByText('gRPCNew Request').hover();
-    await page.getByTestId('Dropdown-New-Request').click();
-    await page.getByRole('menuitemradio', { name: 'Rename' }).click();
-    await page.getByRole('textbox', { name: 'gRPC New Request' }).fill('Louis GRPC request - Server Stream\n');
-    await page.getByTestId('request-pane').getByTestId('OneLineEditor').first().click();
-    await page.getByTestId('request-pane').getByTestId('OneLineEditor').first().pressSequentially('localhost:50051');
+    await selectGrpcMethodFromReflection(page, '/RouteGuide/ListFeatures');
 
-    await page.getByTestId('button-server-reflection').click();
-    await expect.soft(page.getByRole('button', { name: 'Select Method Select gRPC' })).toBeEnabled();
-    await page.getByRole('button', { name: 'Select Method Select gRPC' }).click();
-    await page.getByRole('option', { name: '/RouteGuide/ListFeatures' }).click();
+    await fillGrpcRequestBody(page, requestBody);
 
-    await page.getByRole('tab', { name: 'Server Streaming' }).click();
-    await page.getByTestId('CodeEditor').getByRole('textbox').focus();
-    // await page.getByTestId('CodeEditor').getByRole('textbox').clear();
+    const startButton = page.getByRole('button', { name: 'Start' });
+    await expect.soft(startButton).toBeEnabled();
+    await insomnia.workspacePage.sendRequest('Start');
+    await expect.soft(insomnia.workspacePage.responseStatusTag).toContainText('0 OK');
 
-    const bodyArea = page.getByTestId('CodeEditor').getByRole('textbox')
-    //trade off, unable to use clear() to remove the original text.
-    const selectAllKey = process.platform === 'darwin' ? 'Meta+a' : 'Control+a';
-    await bodyArea.press(selectAllKey);
-    await bodyArea.press("Backspace");
-    await bodyArea.pressSequentially(JSON.stringify(requestBody));
-    
-    await page.waitForTimeout(1000);
-    await page.getByRole('button', { name: 'Start' }).click();
-    await expect.soft(statusTag).toContainText('0 OK');
-    const tabCount = await page.getByRole('tab', { name: 'Response'}).count();
+    /**
+     * Only validate the multiple responses from server side with different contents of locations.
+     * TODO: Add more validations for response:
+     *  - Value of latitude and longitude should be in scope of provided.
+     *  - Accuracy of location from response body.
+     */
+    await expect.soft(page.getByRole('tab', { name: 'Response 10', exact: true })).toBeVisible();
+    const tabCount = await page.getByRole('tab', { name: /^Response/ }).count();
     expect.soft(tabCount).toBeGreaterThan(10);
-    
+
     const responseTab1 = page.getByRole('tab', { name: 'Response 1', exact: true });
     const response10 = await page.getByRole('tab', { name: 'Response 10', exact: true }).textContent();
     await expect.soft(responseTab1).not.toHaveText((response10 ?? '').trim());
-
-    // await page.getByTestId('request-pane').getByRole('button', { name: 'Send' }).click();
-
-    // await expect.soft(statusTag).toContainText('200 OK');
-    // await expect.soft(responseBody).toContainText('"id": "1"');
-
-    // Switch to Raw Data view and verify raw JSON
-    // await page.getByRole('button', { name: 'Preview' }).click();
-    // await page.getByRole('menuitem', { name: 'Raw Data' }).click();
-    // await expect.soft(responseBody).toContainText('{"id":"1"}');
-
-    // await page.getByRole('button', { name: 'Just Now' }).click();
-    // await expect.soft(page.getByRole('button', { name: '200 OK GET http://127.0.0.1:' })).toBeVisible();
-
   });
 });
