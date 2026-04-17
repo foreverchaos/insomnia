@@ -99,6 +99,18 @@ export class ProjectPage extends BasePage {
   }
 
   /**
+   * Louis: Import request collection from cURL command.
+   */
+  async importFromCurl(curlCommand: string): Promise<void> {
+    await this.root.getByLabel('Import').click();
+    await this.page.locator('[data-test-id="import-from-curl"]').click();
+    //Louis: Seems fill() not working stably, use pressSequentially instead.
+    await this.page.getByRole('textbox', { name: 'cURL' }).pressSequentially(curlCommand);
+    await this.scanButton.click();
+    await this.importButton.click();
+  }
+
+  /**
    * Imports multiple fixture files into the project via clipboard.
    * After each import, navigates back to the project page to continue importing.
    * @param fixturePaths - Array of paths relative to fixtures directory

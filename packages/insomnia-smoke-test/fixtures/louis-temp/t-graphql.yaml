@@ -1,0 +1,79 @@
+type: collection.insomnia.rest/5.0
+schema_version: "5.1"
+name: GraphQL- Louis test
+meta:
+  id: wrk_f7575661eb9c4b0eb99bf8848647b5fb
+  created: 1776237281149
+  modified: 1776237830702
+  description: ""
+collection:
+  - url: localhost:4010/graphqlTest
+    name: GraphQL request with number
+    meta:
+      id: req_d7a0a95c9bfd48ee8ad4d968563e7863
+      created: 1655289826760
+      modified: 1776237737759
+      isPrivate: false
+      description: ""
+      sortKey: 0
+    method: POST
+    body:
+      mimeType: application/graphql
+      text: '{"query":"query($inputVar: Int) { echoNum(intVar:
+        $inputVar)}","variables":"{\n\t\"inputVar\": {{ _.intVar }}\n}"}'
+    headers:
+      - name: Content-Type
+        value: application/json
+    settings:
+      renderRequestBody: true
+      encodeUrl: true
+      followRedirects: global
+      cookies:
+        send: true
+        store: true
+      rebuildPath: true
+  - url: localhost:4010/graphqlTest
+    name: GraphQL request with invalid number
+    meta:
+      id: req_a2e8178491eb469fac684545feffeffe
+      created: 1776237296783
+      modified: 1776237777644
+      isPrivate: false
+      description: ""
+      sortKey: -1776237296783
+    method: POST
+    body:
+      mimeType: application/graphql
+      text: "{\"query\":\"query($inputVar: Int) { echoNum(intVar:
+        $inputVar)}\",\"variables\":\"{\\n\\t\\\"inputVar\\\": {% faker
+        'randomInt' %}\\n}\"}"
+    headers:
+      - name: User-Agent
+        value: insomnia/12.5.1-alpha.0
+        description: ""
+        disabled: false
+      - name: Content-Type
+        value: application/json
+    settings:
+      renderRequestBody: true
+      encodeUrl: true
+      followRedirects: global
+      cookies:
+        send: true
+        store: true
+      rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_06a825eaf3e94c438559411844e865bc
+    created: 1655289816559
+    modified: 1655289816559
+environments:
+  name: Base Environment
+  meta:
+    id: env_80fb2a8f6c7b4742ba5a01ac172efc23
+    created: 1655289816558
+    modified: 1655289816558
+    isPrivate: false
+  data:
+    intVar: 666
